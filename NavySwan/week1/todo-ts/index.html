@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CSS 파일 업로드 -->
+    <link rel="stylesheet" href = "./style.css" /> <!-- './' -> 동일 경로를 의미 -->
+    <!-- JS 파일 업로드 -->
+    <!-- defer => 워크북 1주차 참고 -->
+    <script type = "module" src = "./dist/script.js" defer></script> 
+    <title>UMC TODO</title>
+</head>
+<body>
+    <div class = "todo-container">
+        <h1 class = "todo-container__header">Swan TODO</h1> <!-- 웹의 최상위 제목 -->
+        <form id="todo-form" class = "todo-container__form"> <!-- js 요소를 넣어주기 위해 id를 넣어줌 -->
+            <!-- 할일 입력을 위한 input 태그 -->
+            <input 
+            type="text" 
+            id = "todo-input" 
+            class="todo-container__input"
+            placeholder="할 일을 입력해주세요."
+            required> <!-- required => '값이 무조건 들어와야 한다'는 의미 -->
+            <!-- (암기) 버튼이 눌릴때 액션을 취하기 위해서는 반드시 버튼 type을 "submit"으로 설정해야 한다 -->
+            <button type="submit" class = "todo-container__button">할일 추가</button>
+        </form>
+        <div class="render-container">
+            <div class ="render-container__section">
+                <h2 class="render-container__title">할 일</h2>
+                <!-- 리스트를 나타낼 때 보통 ul 태그(순서가 없는 리스트)를 많이 쓴다 -->
+                <ul id="todo-list" class = "render-container__list"></ul>
+            </div>
+            
+            <div class ="render-container__section">
+                <h2 class="render-container__title">완료</h2>
+                <ul id="done-list" class = "render-container__list">
+                </ul>
+            </div>
+        </div> 
+        </div> 
+  
+</body>
+</html>
+
