@@ -6,7 +6,7 @@ DGU-UMC 8기 Web 스터디 A조
 
 |               류창선                |               유설희                |               박지은                |               곽도윤                |               한지예                |
 | :-----------------------------------: | :-----------------------------------: | :-----------------------------------: | :-----------------------------------: | :-----------------------------------: |
-| [류창선](https://github.com/Changsun-Ryu) | [박지현](https://github.com/yooseolhee) | [박지은](https://github.com/zienyyyy) | [곽도윤](https://github.com/hairyung2002) | [한지예](https://github.com/kelly0819) |
+| [류창선](https://github.com/Changsun-Ryu) | [유설희](https://github.com/yooseolhee) | [박지은](https://github.com/zienyyyy) | [곽도윤](https://github.com/hairyung2002) | [한지예](https://github.com/kelly0819) |
 
 <br/>
 
