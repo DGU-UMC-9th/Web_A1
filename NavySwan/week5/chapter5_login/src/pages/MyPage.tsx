@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom';
 import { getMyInfo } from '../apis/auth.ts'
+import { useAuth } from '../context/AuthContext';
 import type { ResponseMyInfoDto } from '../types/auth.ts';
 
 const MyPage = () => {
     const navigate = useNavigate();
-    const {logout} = useAuth();
+    const { logout } = useAuth();
 
     const [data, setData] = useState<ResponseMyInfoDto | null>(null);
 
@@ -28,10 +30,11 @@ const MyPage = () => {
 
     return (
     <div>
-        <h1> {data?.data?.name}님 환영합니다.</h1>
-        <img src = {data?.data?.avatar as string} alt = {"구글 로고"} /> // 알아서 예외처리 (사진 없을 때)
+    <h1>{data?.data?.name}님 환영합니다.</h1>
+    {/* 알아서 예외처리 (사진 없을 때) */}
+    <img src={data?.data?.avatar as string} alt="구글 로고" />
 
-        <button className = "cursor-pointer bg-blue-300 rounded-sm p-5 hover:scale-90" onClick={handleLogout}> 로그아웃 </button>
+    <button className="cursor-pointer bg-blue-300 rounded-sm p-5 hover:scale-90" onClick={handleLogout}> 로그아웃 </button>
 
     </div>
     );

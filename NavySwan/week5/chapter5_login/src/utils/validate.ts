@@ -9,6 +9,8 @@ function validateUser(values: UserSigninInformation) {
         password: "",
     };
 
+
+    // 이메일 형식에 대한 검사
     if (!/^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*\.[a-zA-Z]{2,3}$/i.test(
         values.email,
     )){
@@ -22,6 +24,7 @@ function validateUser(values: UserSigninInformation) {
     return errors;
 }
 
+// 로그인 유효성 검사 함수
 function validateSignin(values: UserSigninInformation){
     return validateUser(values);
 }
