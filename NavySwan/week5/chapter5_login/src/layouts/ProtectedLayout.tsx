@@ -1,0 +1,19 @@
+// chapter5 1강 43분 부분
+import {useAuth} from "../context/AuthContext.tsx";
+import {Navigate, Outlet, useLocation} from "react-router-dom";
+
+
+const ProtectedLayout = () => {
+    const {accessToken} = useAuth();
+    const location = useLocation();
+
+
+    if(!accessToken) {
+        return <Navigate to ="/login" state = {{location}} replace />;
+    }
+
+    return <Outlet />;
+
+};
+
+export default ProtectedLayout;
