@@ -11,7 +11,7 @@ export default function MovieCard({ movie }: MovieCardProps) {
     const navigate = useNavigate();
 
 // leading -> 줄간격
-// line-clamp-3 -> 3줄 이후는 ... 으로 나오게 하는 기능
+// line-clamp-3 -> 3줄 이후는 ... 으로 나오게 함
     return (
         <div
         onClick={(): void | Promise<void> => navigate(`/movie/${movie.id}`)}
