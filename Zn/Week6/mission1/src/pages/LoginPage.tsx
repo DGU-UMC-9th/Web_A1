@@ -1,19 +1,24 @@
-import useForm from "../hooks/useForm.ts";
-import { validateSignin } from "../utils/validate.ts";
-import type { UserSigninInformation } from "../utils/validate.ts";
-import { useAuth } from "../context/AuthContext.tsx";
+import useForm from "../hooks/useForm";
+import { validateSignin } from "../utils/validate";
+import type { UserSigninInformation } from "../utils/validate";
+import { useAuth } from "../context/AuthContext";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const LoginPage = () => {
   const { login, accessToken } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // ✅ 보호 라우트에서 넘어온 경로
+  const from = (location.state as { from?: string })?.from || "/";
+
+  // ✅ 이미 로그인 상태라면 원래 가야 할 곳으로 보내기
   useEffect(() => {
     if (accessToken) {
-      navigate("/");
+      navigate(from, { replace: true });
     }
-  }, [navigate, accessToken]);
+  }, [navigate, accessToken, from]);
 
   const { values, errors, touched, getInputProps } =
     useForm<UserSigninInformation>({
@@ -24,7 +29,6 @@ const LoginPage = () => {
       validate: validateSignin,
     });
 
-  // ✅ 로그인 버튼 비활성화 조건
   const isDisabled =
     Object.values(errors || {}).some((error) => error.length > 0) ||
     Object.values(values).some((value) => value === "");
@@ -32,13 +36,18 @@ const LoginPage = () => {
   const handleSubmit = async () => {
     try {
       await login(values);
-      navigate("/my");
+      // ✅ 일반 로그인은 state.from만 이용
+      navigate(from, { replace: true });
     } catch {
-      navigate("/");
+      alert("로그인 실패. 다시 시도해주세요.");
     }
   };
 
   const handleGoogleLogin = () => {
+    // ✅ 구글 로그인은 redirectPath를 localStorage에 저장 (SPA state 날아가니까)
+    const redirectPath = from || "/";
+    localStorage.setItem("redirectPath", redirectPath);
+
     window.location.href =
       import.meta.env.VITE_SERVER_API_URL + "/v1/auth/google/login";
   };
@@ -78,7 +87,6 @@ const LoginPage = () => {
           <div className="text-red-500 text-sm">{errors.password}</div>
         )}
 
-        {/* ✅ isDisabled 적용 */}
         <button
           type="button"
           onClick={handleSubmit}
@@ -87,7 +95,7 @@ const LoginPage = () => {
             ${
               isDisabled
                 ? "bg-gray-300 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
+                : "bg-[#ff4cc4] hover:bg-[#ff4cc4]"
             }`}
         >
           로그인
@@ -96,11 +104,11 @@ const LoginPage = () => {
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full bg-blue-600 text-white py-3 rounded-md text-lg font-medium hover:bg-blue-700 transition-colors cursor-pointer"
+          className="w-full bg-[#ff4cc4] text-white py-3 rounded-md text-lg font-medium hover:bg-[#ff4cc4] transition-colors cursor-pointer"
         >
           <div className="flex items-center justify-center gap-4">
             <div className="w-7 h-7">
-              <img src={"/images/google.png"} alt="Google Logo Image" />
+              <img src={"/images/google.png"} alt="Google Logo" />
             </div>
             <span>구글 로그인</span>
           </div>

@@ -1,21 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyInfo } from "../apis/auth.ts";
+import { getMyInfo } from "../apis/auth";
 import { useAuth } from "../context/AuthContext";
-import type { ResponseMyInfoDto } from "../types/auth.ts";
+import type { ResponseMyInfoDto } from "../types/auth";
 
 const MyPage = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const [data, setData]: [
-    ResponseMyInfoDto,
-    React.Dispatch<React.SetStateAction<ResponseMyInfoDto>>
-  ] = useState<ResponseMyInfoDto>({} as ResponseMyInfoDto);
+  const [data, setData] = useState<ResponseMyInfoDto>({} as ResponseMyInfoDto);
 
   useEffect(() => {
     const getData = async () => {
-      const response: ResponseMyInfoDto = await getMyInfo();
-      console.log(response);
+      const response = await getMyInfo();
       setData(response);
     };
     getData();
@@ -29,34 +25,44 @@ const MyPage = () => {
   const user = data?.data;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 text-gray-800">
-      <div className="w-[360px] bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center gap-5">
+    <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f] text-white">
+      <div className="w-[380px] bg-[#1a1a1a]/90 backdrop-blur-md rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-6 border border-gray-700">
         {/* ✅ 환영 문구 */}
-        <h1 className="text-xl font-semibold">{user?.name}님 환영합니다.</h1>
+        <h1 className="text-2xl font-semibold text-pink-400">
+          {user?.name ? `${user.name}님 환영합니다` : "마이페이지"}
+        </h1>
 
-        {/* ✅ 프로필 이미지 또는 이니셜 박스 */}
+        {/* ✅ 프로필 */}
         {user?.avatar ? (
           <img
             src={user.avatar as string}
             alt="프로필 이미지"
-            className="w-24 h-24 rounded-xl object-cover border-2 border-gray-300"
+            className="w-28 h-28 rounded-full border-2 border-pink-400 shadow-md object-cover"
           />
         ) : (
-          <div className="w-24 h-24 flex items-center justify-center bg-orange-500 text-white text-3xl font-bold rounded-xl">
-            {user?.name?.slice(-2)} {/* 이름의 마지막 두 글자만 표시 */}
+          <div className="w-28 h-28 flex items-center justify-center bg-pink-500 text-white text-3xl font-bold rounded-full shadow-md">
+            {user?.name?.slice(-2) || "유저"}
           </div>
         )}
 
         {/* ✅ 이메일 */}
-        <p className="text-gray-600">{user?.email}</p>
+        <p className="text-gray-400 text-sm">{user?.email}</p>
 
-        {/* ✅ 로그아웃 버튼 */}
-        <button
-          onClick={handleLogout}
-          className="mt-4 bg-blue-400 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-blue-500 active:scale-95 transition-transform"
-        >
-          로그아웃
-        </button>
+        {/* ✅ 버튼 영역 */}
+        <div className="flex flex-col w-full mt-4 gap-3">
+          <button
+            onClick={handleLogout}
+            className="w-full py-2 rounded-lg bg-pink-500 text-white font-semibold hover:bg-pink-600 active:scale-95 transition"
+          >
+            로그아웃
+          </button>
+          <button
+            onClick={() => navigate("/")}
+            className="w-full py-2 rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600 active:scale-95 transition"
+          >
+            홈으로 돌아가기
+          </button>
+        </div>
       </div>
     </div>
   );

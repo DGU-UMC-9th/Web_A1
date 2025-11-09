@@ -1,10 +1,9 @@
 import { z } from "zod";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { postSignup } from "../apis/auth"; // 회원가입 API
-import { useNavigate } from "react-router-dom"; // 페이지 이동용 훅
+import { postSignup } from "../apis/auth";
+import { useNavigate } from "react-router-dom";
 
-// Zod 유효성 검사
 const schema = z
   .object({
     email: z.string().email({ message: "올바른 이메일 형식이 아닙니다." }),
@@ -26,12 +25,11 @@ const schema = z
 type FormFields = z.infer<typeof schema>;
 
 const SignupPage = () => {
-  const navigate = useNavigate(); // navigate 훅 선언
-
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<FormFields>({
     defaultValues: {
       name: "",
@@ -40,95 +38,103 @@ const SignupPage = () => {
       passwordCheck: "",
     },
     resolver: zodResolver(schema),
-    mode: "onBlur",
+    mode: "onChange", // 🔹 변경 시 바로 유효성 검사 반영
   });
 
-  // 회원가입 처리 함수
   const onSubmit: SubmitHandler<FormFields> = async (data) => {
     try {
-      const response = await postSignup({
+      await postSignup({
         name: data.name,
         email: data.email,
         password: data.password,
         avatar: "",
       });
 
-      console.log("회원가입 성공:", response);
-
-      // 회원가입 성공 시 홈("/")으로 이동
+      alert("회원가입이 완료되었습니다! 🎉");
       navigate("/");
     } catch (error: any) {
-      console.error("회원가입 실패:", error);
       alert(error?.message || "회원가입 중 오류가 발생했습니다.");
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4">
-      <div className="flex flex-col gap-3 w-[300px]">
-        {/* 이메일 입력 */}
-        <input
-          {...register("email")}
-          className={`border p-[10px] rounded-sm ${
-            errors.email ? "border-red-500 bg-red-200" : "border-gray-300"
-          } focus:border-[#8b7bff]`}
-          type="email"
-          placeholder="이메일"
-        />
-        {errors.email && (
-          <div className="text-red-500 text-sm">{errors.email.message}</div>
-        )}
+    <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f] text-white">
+      <div className="w-[360px] bg-[#1a1a1a]/90 border border-gray-700 rounded-2xl shadow-2xl p-8 flex flex-col gap-5 backdrop-blur-md">
+        <h1 className="text-2xl font-bold text-center text-pink-400 mb-2">
+          회원가입
+        </h1>
 
-        {/* 비밀번호 입력 */}
-        <input
-          {...register("password")}
-          className={`border p-[10px] rounded-sm ${
-            errors.password ? "border-red-500 bg-red-200" : "border-gray-300"
-          } focus:border-[#8b7bff]`}
-          type="password"
-          placeholder="비밀번호"
-        />
-        {errors.password && (
-          <div className="text-red-500 text-sm">{errors.password.message}</div>
-        )}
+        {/* 입력 폼 */}
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
+          <input
+            {...register("email")}
+            className={`bg-gray-800 text-white border p-3 rounded-md text-sm focus:ring-2 focus:ring-pink-400 focus:outline-none ${
+              errors.email ? "border-pink-500" : "border-gray-600"
+            }`}
+            type="email"
+            placeholder="이메일"
+          />
+          {errors.email && (
+            <p className="text-pink-400 text-xs">{errors.email.message}</p>
+          )}
 
-        {/* 비밀번호 확인 */}
-        <input
-          {...register("passwordCheck")}
-          className={`border p-[10px] rounded-sm ${
-            errors.passwordCheck
-              ? "border-red-500 bg-red-200"
-              : "border-gray-300"
-          } focus:border-[#8b7bff]`}
-          type="password"
-          placeholder="비밀번호 확인"
-        />
-        {errors.passwordCheck && (
-          <div className="text-red-500 text-sm">
-            {errors.passwordCheck.message}
-          </div>
-        )}
+          <input
+            {...register("password")}
+            className={`bg-gray-800 text-white border p-3 rounded-md text-sm focus:ring-2 focus:ring-pink-400 focus:outline-none ${
+              errors.password ? "border-pink-500" : "border-gray-600"
+            }`}
+            type="password"
+            placeholder="비밀번호"
+          />
+          {errors.password && (
+            <p className="text-pink-400 text-xs">{errors.password.message}</p>
+          )}
 
-        {/* 이름 입력 */}
-        <input
-          {...register("name")}
-          className={`border p-[10px] rounded-sm ${
-            errors.name ? "border-red-500 bg-red-200" : "border-gray-300"
-          } focus:border-[#8b7bff]`}
-          type="text"
-          placeholder="이름"
-        />
-        {errors.name && (
-          <div className="text-red-500 text-sm">{errors.name.message}</div>
-        )}
+          <input
+            {...register("passwordCheck")}
+            className={`bg-gray-800 text-white border p-3 rounded-md text-sm focus:ring-2 focus:ring-pink-400 focus:outline-none ${
+              errors.passwordCheck ? "border-pink-500" : "border-gray-600"
+            }`}
+            type="password"
+            placeholder="비밀번호 확인"
+          />
+          {errors.passwordCheck && (
+            <p className="text-pink-400 text-xs">
+              {errors.passwordCheck.message}
+            </p>
+          )}
 
-        {/* 회원가입 버튼 */}
+          <input
+            {...register("name")}
+            className={`bg-gray-800 text-white border p-3 rounded-md text-sm focus:ring-2 focus:ring-pink-400 focus:outline-none ${
+              errors.name ? "border-pink-500" : "border-gray-600"
+            }`}
+            type="text"
+            placeholder="이름"
+          />
+          {errors.name && (
+            <p className="text-pink-400 text-xs">{errors.name.message}</p>
+          )}
+
+          {/* ✅ 버튼 색상: 유효하면 핑크 / 아니면 회색 */}
+          <button
+            type="submit"
+            disabled={!isValid || isSubmitting}
+            className={`mt-2 py-2 rounded-md text-white font-semibold transition-all duration-300 ${
+              !isValid || isSubmitting
+                ? "bg-gray-600 cursor-not-allowed"
+                : "bg-pink-500 hover:bg-pink-600 active:scale-95"
+            }`}
+          >
+            {isSubmitting ? "가입 중..." : "회원가입"}
+          </button>
+        </form>
+
         <button
-          onClick={handleSubmit(onSubmit)}
-          disabled={isSubmitting}
-          className="bg-[#8b7bff] text-white py-2 rounded-sm hover:bg-[#7a6de0] transition-colors disabled:bg-gray-300"
+          onClick={() => navigate("/")}
+          className="text-gray-400 text-xs hover:text-pink-400 transition mt-2"
         >
-          {isSubmitting ? "가입 중..." : "회원가입"}
+          홈으로 돌아가기
         </button>
       </div>
     </div>

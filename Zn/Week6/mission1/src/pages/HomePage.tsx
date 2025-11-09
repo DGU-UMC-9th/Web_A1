@@ -1,44 +1,103 @@
-import useGetLpList from "../hooks/queries/useGetLpList";
-import { useState } from "react";
-import { PAGINATION_ORDER } from "../enums/common"; // ✅ enum import 추가
+import { useEffect, useState } from "react";
+import useGetInfiniteLpList from "../hooks/queries/useGetInfiniteLpList";
+import { PAGINATION_ORDER } from "../enums/common";
+import { useInView } from "react-intersection-observer";
+import LpCard from "../components/LpCard/LpCard";
+import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {
-  const [search, setSearch] = useState<string>("예제");
+  const [search, setSearch] = useState("");
+  const [asc, setAsc] = useState(true);
+  const currentOrder = asc ? PAGINATION_ORDER.asc : PAGINATION_ORDER.desc;
+  const navigate = useNavigate();
 
-  // ✅ 쿼리 파라미터 설정
-  const cursor = 0;
-  const order = PAGINATION_ORDER.desc; // ✅ enum 값으로 변경
-  const limit = 10;
-
-  // ✅ useGetLpList는 객체 하나만 인자로 받는다
-  const { data, isPending, isError } = useGetLpList({
-    cursor,
+  const {
+    data: lps,
+    isFetching,
+    hasNextPage,
+    isPending,
+    fetchNextPage,
+    isError,
+  } = useGetInfiniteLpList({
+    limit: 10,
     search,
-    order,
-    limit,
+    order: currentOrder,
   });
 
-  if (isPending) {
-    return <div className="mt-20">Loading...</div>;
-  }
+  const { ref, inView } = useInView({ threshold: 0 });
 
-  if (isError) {
-    return <div className="mt-20">Error...</div>;
-  }
+  // ✅ 무한 스크롤
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetching) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetching, fetchNextPage]);
+
+  if (isPending)
+    return (
+      <div className="flex justify-center items-center h-full text-4xl">
+        Loading...
+      </div>
+    );
+
+  if (isError)
+    return (
+      <div className="flex justify-center items-center h-full text-4xl">
+        Error
+      </div>
+    );
 
   return (
-    <div className="mt-20">
-      <input
-        value={search}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-          setSearch(e.target.value)
-        }
-      />
+    <div className="container mx-auto px-4 py-6 relative">
+      {/* ✅ 정렬 버튼 */}
+      <div className="flex justify-end items-center mb-4">
+        <div className="inline-flex rounded-md shadow-sm" role="group">
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium rounded-l-lg transition-colors duration-200 ${
+              !asc
+                ? "bg-white text-black"
+                : "bg-black text-white border hover:bg-gray-600"
+            }`}
+            onClick={() => setAsc(false)}
+          >
+            오래된 순
+          </button>
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium rounded-r-lg transition-colors duration-200 ${
+              asc
+                ? "bg-white text-black"
+                : "bg-black text-white border hover:bg-gray-600"
+            }`}
+            onClick={() => setAsc(true)}
+          >
+            최신 순
+          </button>
+        </div>
+      </div>
 
-      {Array.isArray(data) &&
-        data.map((p) => (
-          <h1 key={p.id}>{p.title}</h1>
-        ))}
+      {/* ✅ LP 목록 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {lps?.pages
+          ?.map((page) => page.data.data)
+          ?.flat()
+          ?.map((lp) => (
+            <LpCard key={lp.id} lp={lp} />
+          ))}
+      </div>
+
+      {/* ✅ 트리거 */}
+      <div ref={ref} className="h-2" />
+
+      {/* ✅ 플로팅 버튼 */}
+      <button
+        onClick={() => navigate("/new-lp")}
+        className="fixed bottom-8 right-8 bg-pink-500 hover:bg-pink-600 text-white rounded-full p-4 shadow-lg transition"
+      >
+        <Plus size={28} />
+      </button>
     </div>
   );
 };

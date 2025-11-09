@@ -8,7 +8,18 @@ const ProtectedLayout = () => {
   const location = useLocation();
 
   if (!accessToken) {
-    return <Navigate to={"/login"} state={{ location }} replace />;
+    // ✅ 지금 가려던 경로 저장 (쿼리까지 포함)
+    const currentPath = location.pathname + location.search;
+    localStorage.setItem("redirectPath", currentPath);
+
+    // ✅ LoginPage에서 alert를 띄울 수 있도록 state로 표시
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: currentPath, needAlert: true }}
+        replace
+      />
+    );
   }
 
   return (

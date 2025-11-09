@@ -1,5 +1,5 @@
 import { createBrowserRouter, RouterProvider, type RouteObject } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"; // ✅ 추가
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import HomeLayout from "./layouts/HomeLayout";
 import HomePage from "./pages/HomePage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -9,12 +9,12 @@ import MyPage from "./pages/MyPage";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedLayout from "./layouts/ProtectedLayout";
 import GoogleLoginRedirectPage from "./pages/GoogleLoginRedirectPage";
+import LpDetailPage from "./pages/LpDetailPage";
 import "./App.css";
 
-// ✅ React Query 클라이언트 생성
 const queryClient = new QueryClient();
 
-// publicRoutes : 인증 없이 접근 가능한 라우트
+// ✅ 로그인 필요 없는 공개 라우트
 const publicRoutes: RouteObject[] = [
   {
     path: "/",
@@ -29,13 +29,16 @@ const publicRoutes: RouteObject[] = [
   },
 ];
 
-// protectedRoutes : 인증이 필요한 라우트
+// ✅ 로그인 필요한 보호 라우트
 const protectedRoutes: RouteObject[] = [
   {
     path: "/",
     element: <ProtectedLayout />,
     errorElement: <NotFoundPage />,
-    children: [{ path: "my", element: <MyPage /> }],
+    children: [
+      { path: "my", element: <MyPage /> },
+      { path: "lp/:lpid", element: <LpDetailPage /> }, // ✅ LP 상세 보호 페이지
+    ],
   },
 ];
 
@@ -44,7 +47,6 @@ const router = createBrowserRouter([...publicRoutes, ...protectedRoutes]);
 function App() {
   return (
     <AuthProvider>
-      {/* ✅ React Query Provider 추가 */}
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>
