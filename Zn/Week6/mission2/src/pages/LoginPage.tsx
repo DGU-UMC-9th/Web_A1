@@ -10,12 +10,12 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ 로그인 전 접근 경로 받기
+  // ✅ 보호 라우트에서 넘어온 경로
   const from = (location.state as { from?: string })?.from || "/";
 
+  // ✅ 이미 로그인 상태라면 원래 가야 할 곳으로 보내기
   useEffect(() => {
     if (accessToken) {
-      // ✅ 이미 로그인 상태라면 원래 경로로 복귀
       navigate(from, { replace: true });
     }
   }, [navigate, accessToken, from]);
@@ -36,7 +36,7 @@ const LoginPage = () => {
   const handleSubmit = async () => {
     try {
       await login(values);
-      // ✅ 로그인 성공 후, 이전 페이지로 복귀
+      // ✅ 일반 로그인은 state.from만 이용
       navigate(from, { replace: true });
     } catch {
       alert("로그인 실패. 다시 시도해주세요.");
@@ -44,6 +44,10 @@ const LoginPage = () => {
   };
 
   const handleGoogleLogin = () => {
+    // ✅ 구글 로그인은 redirectPath를 localStorage에 저장 (SPA state 날아가니까)
+    const redirectPath = from || "/";
+    localStorage.setItem("redirectPath", redirectPath);
+
     window.location.href =
       import.meta.env.VITE_SERVER_API_URL + "/v1/auth/google/login";
   };
