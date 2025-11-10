@@ -46,7 +46,7 @@ const Navbar = ({ onMenuToggle }: NavbarProps) => {
                         to ='/' 
                         className='text-xl font bold text-gray-900 dark:text-white'
                     >
-                        SpinningSpinning Dollimpan
+                        돌랴돌랴....
                     </Link>
                 </div>
 
