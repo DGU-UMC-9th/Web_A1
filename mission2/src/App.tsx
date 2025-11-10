@@ -1,20 +1,20 @@
-import { createBrowserRouter, RouterProvider, type RouteObject } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import HomeLayout from "./layouts/HomeLayout";
-import HomePage from "./pages/HomePage";
-import NotFoundPage from "./pages/NotFoundPage";
-import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignupPage";
-import MyPage from "./pages/MyPage";
-import { AuthProvider } from "./context/AuthContext";
-import ProtectedLayout from "./layouts/ProtectedLayout";
-import GoogleLoginRedirectPage from "./pages/GoogleLoginRedirectPage";
-import LpDetailPage from "./pages/LpDetailPage";
-import "./App.css";
+import { createBrowserRouter, RouterProvider, type RouteObject } from 'react-router-dom';
+import HomeLayout from './layouts/HomeLayout';
+import HomePage from './pages/HomePage';
+import NotFoundPage from './pages/NotFoundPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import MyPage from './pages/MyPage';
+import LpDetailPage from './pages/LpDetailPage';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedLayout from './layouts/ProtectedLayout';
+import GoogleLoginRedirectPage from './pages/GoogleLoginRedirectPage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+//import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import './App.css';
+import LpEditPage from './pages/LpEditPage';
 
-const queryClient = new QueryClient();
-
-// ✅ 로그인 필요 없는 공개 라우트
+// publicRoutes : 인증 없이 접근 가능한 라우트
 const publicRoutes: RouteObject[] = [
   {
     path: "/",
@@ -22,35 +22,46 @@ const publicRoutes: RouteObject[] = [
     errorElement: <NotFoundPage />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: "login", element: <LoginPage /> },
-      { path: "signup", element: <SignupPage /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'signup', element: <SignupPage /> },
       { path: "v1/auth/google/callback", element: <GoogleLoginRedirectPage /> },
+      { path: 'lp/:lpid', element: <LpDetailPage /> },
     ],
   },
 ];
 
-// ✅ 로그인 필요한 보호 라우트
+// protectedRoutes : 인증이 필요한 라우트
 const protectedRoutes: RouteObject[] = [
   {
     path: "/",
     element: <ProtectedLayout />,
     errorElement: <NotFoundPage />,
     children: [
-      { path: "my", element: <MyPage /> },
-      { path: "lp/:lpid", element: <LpDetailPage /> }, // ✅ LP 상세 보호 페이지
+      { path: "my", element: <MyPage />, },
+      { path: "lp/:lpid/edit", element: <LpEditPage /> },
     ],
   },
 ];
 
 const router = createBrowserRouter([...publicRoutes, ...protectedRoutes]);
 
+// eslint-disable-next-line react-refresh/only-export-components
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+    },
+  },
+});
+
 function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
         <RouterProvider router={router} />
-      </QueryClientProvider>
-    </AuthProvider>
+      </AuthProvider>
+      {/*import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />*/}
+    </QueryClientProvider>
   );
 }
 

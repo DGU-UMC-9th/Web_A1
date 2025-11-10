@@ -1,144 +1,221 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { type SubmitHandler, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { postSignup } from "../apis/auth";
-import { useNavigate } from "react-router-dom";
 
-const schema = z
+const emailSchema = z.object({
+  email: z.string().email({ message: "올바른 이메일 형식이 아닙니다." }),
+});
+type EmailForm = z.infer<typeof emailSchema>;
+
+const passwordSchema = z
   .object({
-    email: z.string().email({ message: "올바른 이메일 형식이 아닙니다." }),
     password: z
       .string()
       .min(8, { message: "비밀번호는 8자 이상이어야 합니다." })
-      .max(20, { message: "비밀번호는 20자 이하이어야 합니다." }),
+      .max(20, { message: "비밀번호는 20자 이하여야 합니다." }),
     passwordCheck: z
       .string()
       .min(8, { message: "비밀번호는 8자 이상이어야 합니다." })
-      .max(20, { message: "비밀번호는 20자 이하이어야 합니다." }),
-    name: z.string().min(1, { message: "이름을 입력해주세요." }),
+      .max(20, { message: "비밀번호는 20자 이하여야 합니다." }),
   })
-  .refine((data) => data.password === data.passwordCheck, {
+  .refine((v) => v.password === v.passwordCheck, {
     message: "비밀번호가 일치하지 않습니다.",
     path: ["passwordCheck"],
   });
+type PasswordForm = z.infer<typeof passwordSchema>;
 
-type FormFields = z.infer<typeof schema>;
+const nameSchema = z.object({
+  name: z.string().min(1, { message: "닉네임을 입력해주세요." }),
+});
+type NameForm = z.infer<typeof nameSchema>;
 
-const SignupPage = () => {
+export default function SignupPage() {
   const navigate = useNavigate();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting, isValid },
-  } = useForm<FormFields>({
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      passwordCheck: "",
-    },
-    resolver: zodResolver(schema),
-    mode: "onChange", // 🔹 변경 시 바로 유효성 검사 반영
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [savedEmail, setSavedEmail] = useState("");
+  const [savedPassword, setSavedPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
+
+  const emailForm = useForm<EmailForm>({
+    defaultValues: { email: "" },
+    resolver: zodResolver(emailSchema),
+    mode: "onChange",
   });
 
-  const onSubmit: SubmitHandler<FormFields> = async (data) => {
-    try {
-      await postSignup({
-        name: data.name,
-        email: data.email,
-        password: data.password,
-        avatar: "",
-      });
+  const pwForm = useForm<PasswordForm>({
+    defaultValues: { password: "", passwordCheck: "" },
+    resolver: zodResolver(passwordSchema),
+    mode: "onChange",
+  });
 
-      alert("회원가입이 완료되었습니다! 🎉");
-      navigate("/");
-    } catch (error: any) {
-      alert(error?.message || "회원가입 중 오류가 발생했습니다.");
-    }
-  };
+  const nameForm = useForm<NameForm>({
+    defaultValues: { name: "" },
+    resolver: zodResolver(nameSchema),
+    mode: "onChange",
+  });
+
+  const handleEmailNext = emailForm.handleSubmit(({ email }) => {
+    setSavedEmail(email);
+    setStep(2);
+  });
+
+  const handlePwNext = pwForm.handleSubmit(({ password }) => {
+    setSavedPassword(password);
+    setStep(3);
+  });
+
+  const handleFinish = nameForm.handleSubmit(async ({ name }) => {
+    await postSignup({ name, email: savedEmail, password: savedPassword });
+    navigate("/");
+  });
+
+  const Header = (
+    <div className="flex items-center justify-center gap-2 relative w-[300px] mx-auto mb-5">
+      {step > 1 && (
+        <button
+          type="button"
+          aria-label="뒤로"
+          onClick={() => setStep((s) => (s === 2 ? 1 : 2))}
+          className="absolute left-4 text-blue-400 hover:text-blue-400/80 text-2xl font-[800] translate-y-[1px]"
+        >
+          {"❮"}
+        </button>
+      )}
+      <span className="text-2xl font-bold text-blue-400">
+        {"회원가입"}
+      </span>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f0f0f] text-white">
-      <div className="w-[360px] bg-[#1a1a1a]/90 border border-gray-700 rounded-2xl shadow-2xl p-8 flex flex-col gap-5 backdrop-blur-md">
-        <h1 className="text-2xl font-bold text-center text-pink-400 mb-2">
-          회원가입
-        </h1>
+    <div className="flex flex-col items-center justify-center h-full gap-4">
+      <div className="flex flex-col gap-3">
+        {Header}
 
-        {/* 입력 폼 */}
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
-          <input
-            {...register("email")}
-            className={`bg-gray-800 text-white border p-3 rounded-md text-sm focus:ring-2 focus:ring-pink-400 focus:outline-none ${
-              errors.email ? "border-pink-500" : "border-gray-600"
-            }`}
-            type="email"
-            placeholder="이메일"
-          />
-          {errors.email && (
-            <p className="text-pink-400 text-xs">{errors.email.message}</p>
-          )}
+        {step >= 2 && (
+          <div className="mb-2 text-center text-gray-300">
+            <span className="inline-flex items-center gap-2 px-3 py-2 rounded bg-indigo-400">
+              ✉️ <span className="font-medium">{savedEmail}</span>
+            </span>
+          </div>
+        )}
 
-          <input
-            {...register("password")}
-            className={`bg-gray-800 text-white border p-3 rounded-md text-sm focus:ring-2 focus:ring-pink-400 focus:outline-none ${
-              errors.password ? "border-pink-500" : "border-gray-600"
-            }`}
-            type="password"
-            placeholder="비밀번호"
-          />
-          {errors.password && (
-            <p className="text-pink-400 text-xs">{errors.password.message}</p>
-          )}
+        {step === 1 && (
+          <>
+            <input
+              {...emailForm.register("email")}
+              className={`border w-[300px] p-[10px] rounded-sm 
+                ${emailForm.formState.errors.email ? "border-blue-500 bg-blue-200" : "border-gray-300 bg-gray-50"}`}
+              type="email"
+              placeholder="이메일을 입력해주세요"
+            />
+            {emailForm.formState.errors.email && (
+              <div className="text-blue-500 text-sm">{emailForm.formState.errors.email.message}</div>
+            )}
 
-          <input
-            {...register("passwordCheck")}
-            className={`bg-gray-800 text-white border p-3 rounded-md text-sm focus:ring-2 focus:ring-pink-400 focus:outline-none ${
-              errors.passwordCheck ? "border-pink-500" : "border-gray-600"
-            }`}
-            type="password"
-            placeholder="비밀번호 확인"
-          />
-          {errors.passwordCheck && (
-            <p className="text-pink-400 text-xs">
-              {errors.passwordCheck.message}
-            </p>
-          )}
+            <button
+              type="button"
+              onClick={handleEmailNext}
+              disabled={!emailForm.formState.isValid || emailForm.formState.isSubmitting}
+              className={`w-full py-3 rounded-md text-lg font-medium transition-colors
+                ${emailForm.formState.isValid ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-slate-400 text-white cursor-not-allowed"}`}
+            >
+              다음
+            </button>
+          </>
+        )}
 
-          <input
-            {...register("name")}
-            className={`bg-gray-800 text-white border p-3 rounded-md text-sm focus:ring-2 focus:ring-pink-400 focus:outline-none ${
-              errors.name ? "border-pink-500" : "border-gray-600"
-            }`}
-            type="text"
-            placeholder="이름"
-          />
-          {errors.name && (
-            <p className="text-pink-400 text-xs">{errors.name.message}</p>
-          )}
+        {step === 2 && (
+          <>
+            <div className="relative">
+              <input
+                {...pwForm.register("password")}
+                className={`border w-[300px] p-[10px] pr-12 rounded-sm 
+                  ${pwForm.formState.errors.password ? "border-blue-500 bg-blue-200" : "border-gray-300 bg-gray-50"}`}
+                type={showPw ? "text" : "password"}
+                placeholder="비밀번호를 입력해주세요"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+                aria-label="비밀번호 보기/가리기"
+              >
+                {showPw ? "🔒" : "👀"}
+              </button>
+            </div>
+            {pwForm.formState.errors.password && (
+              <div className="text-blue-500 text-sm">{pwForm.formState.errors.password.message}</div>
+            )}
 
-          {/* ✅ 버튼 색상: 유효하면 핑크 / 아니면 회색 */}
-          <button
-            type="submit"
-            disabled={!isValid || isSubmitting}
-            className={`mt-2 py-2 rounded-md text-white font-semibold transition-all duration-300 ${
-              !isValid || isSubmitting
-                ? "bg-gray-600 cursor-not-allowed"
-                : "bg-pink-500 hover:bg-pink-600 active:scale-95"
-            }`}
-          >
-            {isSubmitting ? "가입 중..." : "회원가입"}
-          </button>
-        </form>
+            <div className="relative">
+              <input
+                {...pwForm.register("passwordCheck")}
+                className={`border w-[300px] p-[10px] pr-12 rounded-sm 
+                  ${pwForm.formState.errors.passwordCheck ? "border-blue-500 bg-blue-200" : "border-gray-300 bg-gray-50"}`}
+                type={showPw2 ? "text" : "password"}
+                placeholder="비밀번호를 다시 한 번 입력해주세요"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw2((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+                aria-label="비밀번호 확인 보기/가리기"
+              >
+                {showPw2 ? "🔒" : "👀"}
+              </button>
+            </div>
+            {pwForm.formState.errors.passwordCheck && (
+              <div className="text-blue-500 text-sm">{pwForm.formState.errors.passwordCheck.message}</div>
+            )}
 
-        <button
-          onClick={() => navigate("/")}
-          className="text-gray-400 text-xs hover:text-pink-400 transition mt-2"
-        >
-          홈으로 돌아가기
-        </button>
+            <button
+              type="button"
+              onClick={handlePwNext}
+              disabled={!pwForm.formState.isValid || pwForm.formState.isSubmitting}
+              className={`w-full py-3 rounded-md text-lg font-medium transition-colors
+                ${pwForm.formState.isValid ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-slate-400 text-white cursor-not-allowed"}`}
+            >
+              다음
+            </button>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <div className="flex flex-col items-center gap-2 mb-2">
+              <div className="w-20 h-20 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-300">
+                IMG
+              </div>
+            </div>
+
+            <input
+              {...nameForm.register("name")}
+              className={`border w-[300px] p-[10px] rounded-sm 
+                ${nameForm.formState.errors.name ? "border-blue-500 bg-blue-200" : "border-gray-300 bg-gray-50"}`}
+              type="text"
+              placeholder="닉네임(이름)"
+            />
+            {nameForm.formState.errors.name && (
+              <div className="text-blue-500 text-sm">{nameForm.formState.errors.name.message}</div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleFinish}
+              disabled={!nameForm.formState.isValid || nameForm.formState.isSubmitting}
+              className={`w-full py-3 rounded-md text-lg font-medium transition-colors
+                ${nameForm.formState.isValid ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-slate-400 text-white cursor-not-allowed"}`}
+            >
+              회원가입 완료
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
-};
-
-export default SignupPage;
+}

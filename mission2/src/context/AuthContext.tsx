@@ -1,97 +1,96 @@
-// src/context/AuthContext.tsx
-import { useLocalStorage } from "../hooks/useLocalStorage";
-import { createContext, useContext, useEffect, useState } from "react";
-import { LOCAL_STORAGE_KEY } from "../constants/key";
-import { postSignin, postLogout, getMyInfo } from "../apis/auth";
-import type { RequestSigninDto, ResponseMyInfoDto } from "../types/auth";
+import type { RequestSigninDto } from '../types/auth.ts';
+import { createContext, type PropsWithChildren, useState, useContext } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage.ts';
+import { LOCAL_STORAGE_KEY } from '../constants/key.ts';
+import { postLogout, postSignin } from '../apis/auth.ts';
 
 interface AuthContextType {
-  accessToken: string | null;
-  refreshToken: string | null;
-  userName: string | null;
-  login: (signinData: RequestSigninDto) => Promise<void>;
-  logout: () => Promise<void>;
+    accessToken: string|null;
+    refreshToken: string|null;
+    login: (signInData: RequestSigninDto) => Promise<void>;
+    logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+// eslint-disable-next-line react-refresh/only-export-components
+export const AuthContext = createContext<AuthContextType>({
+    accessToken: null,
+    refreshToken: null,
+    login: async() => {},
+    logout: async() => {},
+});
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const {
-    getItem: getAccessTokenFromStorage,
-    setItem: setAccessTokenInStorage,
-    removeItem: removeAccessTokenFromStorage,
-  } = useLocalStorage(LOCAL_STORAGE_KEY.accessToken);
-  const {
-    getItem: getRefreshTokenFromStorage,
-    setItem: setRefreshTokenInStorage,
-    removeItem: removeRefreshTokenFromStorage,
-  } = useLocalStorage(LOCAL_STORAGE_KEY.refreshToken);
+export const AuthProvider = ({ children }: PropsWithChildren) => {
+    const{
+        getItem: getAccessTokenFromStorage,
+        setItem: setAccessTokenInStorage,
+        removeItem: removeAccessTokenFromStorage,
+    } = useLocalStorage(LOCAL_STORAGE_KEY.accessToken);
 
-  const [accessToken, setAccessToken] = useState(getAccessTokenFromStorage());
-  const [refreshToken, setRefreshToken] = useState(getRefreshTokenFromStorage());
-  const [userName, setUserName] = useState<string | null>(null);
+    const{
+        getItem: getRefreshTokenFromStorage,
+        setItem: setRefreshTokenInStorage,
+        removeItem: removeRefreshTokenFromStorage,
+    } = useLocalStorage(LOCAL_STORAGE_KEY.refreshToken);
 
-  // ✅ 새로고침 후에도 유저 정보 자동 복원
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (accessToken) {
+    const [accessToken, setAccessToken] = useState<string|null>(
+        getAccessTokenFromStorage(),
+    );
+
+    const [refreshToken, setRefreshToken] = useState<string|null>(
+        getRefreshTokenFromStorage(),
+    );
+
+    const login = async(signInData:RequestSigninDto) => {
         try {
-          const res: ResponseMyInfoDto = await getMyInfo();
-          setUserName(res.data.name);
-        } catch (err) {
-          console.log("유저 정보 불러오기 실패", err);
+            const { data } = await postSignin(signInData);
+
+            if(data) {
+                const newAccessToken = data.accessToken;
+                const newRefreshToken = data.refreshToken;
+
+                setAccessTokenInStorage(newAccessToken);
+                setRefreshTokenInStorage(newRefreshToken);
+
+                setAccessToken(newAccessToken);
+                setRefreshToken(newRefreshToken);
+                alert("로그인 성공");
+                window.location.href='/my';
+            }
+        } catch (error) {
+            console.log("로그인 오류", error);
+            alert("로그인 실패");
         }
-      }
     };
-    fetchUser();
-  }, [accessToken]);
 
-  // ✅ 로그인: 토큰 저장 + 사용자명 저장 (navigate는 LoginPage에서 처리)
-  const login = async (signinData: RequestSigninDto) => {
-    try {
-      const { data } = await postSignin(signinData);
+    const logout = async() => {
+        try {
+            await postLogout();
+            removeAccessTokenFromStorage();
+            removeRefreshTokenFromStorage();
 
-      setAccessTokenInStorage(data.accessToken);
-      setRefreshTokenInStorage(data.refreshToken);
-      setAccessToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
-      setUserName(data.name || "사용자");
+            setAccessToken(null);
+            setRefreshToken(null);
 
-      // ❌ window.location.href 제거
-      // ✅ LoginPage에서 navigate(from) 실행하게 맡김
-      alert(`${data.name}님, 로그인에 성공했습니다!`);
-    } catch (error) {
-      console.log("로그인 오류", error);
-      alert("로그인 실패. 다시 시도해주세요.");
-    }
-  };
+            alert("로그아웃 성공");
+        } catch (error) {
+            console.error("로그아웃 오류", error);
+            alert("로그아웃 실패");
+        }
+    };
 
-  const logout = async () => {
-    try {
-      await postLogout();
-      removeAccessTokenFromStorage();
-      removeRefreshTokenFromStorage();
-      setAccessToken(null);
-      setRefreshToken(null);
-      setUserName(null);
-      alert("로그아웃 되었습니다.");
-    } catch (error) {
-      console.log("로그아웃 오류", error);
-      alert("로그아웃 실패. 다시 시도해주세요.");
-    }
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{ accessToken, refreshToken, userName, login, logout }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+    return (
+        <AuthContext.Provider value={{accessToken, refreshToken, login, logout}}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("AuthContext가 존재하지 않습니다.");
-  return ctx;
-};
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error("AuthContext를 찾을 수 없습니다!");
+    }
+
+    return context;
+}

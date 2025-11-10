@@ -1,75 +1,35 @@
-// src/components/Sidebar.tsx
-import { Link } from "react-router-dom";
-import { Search, User, LogOut } from "lucide-react";
-
 interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;      // 모바일에서 햄버거로 여닫기
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ open }: SidebarProps) {
   return (
-    <>
-      {/* ✅ 배경 오버레이 */}
-      {isOpen && (
-        <div
-          onClick={onClose}
-          className="fixed inset-0 bg-black/50 z-30 transition-opacity duration-300"
-        />
-      )}
-
-      {/* ✅ 사이드바 */}
-      <aside
-        className={`fixed top-0 left-0 h-full w-56 bg-[#111111] text-white transform transition-transform duration-300 z-40 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        {/* ✅ 로고 영역 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-          <h1 className="text-xl font-bold text-[#ff4cc4] tracking-wide">
-            DOLIGO
-          </h1>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition"
-            aria-label="close menu"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* ✅ 메뉴 리스트 */}
-        <nav className="flex flex-col mt-6 px-5 gap-4 text-[15px]">
-          <Link
-            to="/search"
-            onClick={onClose}
-            className="flex items-center gap-2 text-gray-300 hover:text-pink-400 transition"
-          >
-            <Search size={18} />
-            찾기
-          </Link>
-
-          <Link
-            to="/my"
-            onClick={onClose}
-            className="flex items-center gap-2 text-gray-300 hover:text-pink-400 transition"
-          >
-            <User size={18} />
-            마이페이지
-          </Link>
-        </nav>
-
-        {/* ✅ 하단 영역 */}
-        <div className="absolute bottom-5 left-0 w-full px-5">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition text-sm"
-          >
-            <LogOut size={16} />
-            탈퇴하기
-          </button>
-        </div>
-      </aside>
-    </>
+    <aside
+      className={[
+        // 레이아웃: 헤더 높이만큼 아래로 시작
+        "mt-11 h-[calc(100vh-56px)]", // Navbar가 h-14(=56px)이므로 높이 보정
+        // 배경/텍스트
+        "bg-zinc-900 text-white",
+        // 레이아웃 참여(고정X). 메인과 나란히 놓여 공간을 나눔
+        "shrink-0 overflow-hidden",
+        // width만 애니메이션
+        "transition-[width] duration-200",
+        "relative z-40",
+        // 반응형 규칙:
+        //  - 모바일/협소: 기본 w-0(숨김), open이면 w-64
+        //  - md 이상: 항상 w-64로 핀 고정
+        open ? "w-64" : "w-0",
+      ].join(" ")}
+      aria-label="사이드바"
+    >
+      <nav className="p-3 space-y-1">
+        <a href="/search" className="block px-3 py-2 rounded hover:bg-white/10">
+          🔍 찾기
+        </a>
+        <a href="/my" className="block px-3 py-2 rounded hover:bg-white/10">
+          👤 마이페이지
+        </a>
+      </nav>
+    </aside>
   );
 }

@@ -1,104 +1,94 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import Sidebar from "./Sidebar";
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.tsx';
+import { useEffect, useState } from 'react';
+import { axiosInstance } from '../apis/axios.ts';
 
-const Navbar = () => {
-  const navigate = useNavigate();
-  const { accessToken, userName, logout } = useAuth(); // ✅ userName만 사용
+interface NavbarProps {
+  onMenuToggle: () => void;
+}
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+const Navbar = ({ onMenuToggle }: NavbarProps) => {
+    const  { accessToken } = useAuth();
+    const navigate = useNavigate();
+    const { logout } = useAuth();
+    const [username, setUsername] = useState('');
 
-  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
-  const closeSidebar = () => setIsSidebarOpen(false);
+    useEffect(() => {
+        //로그인 한 경우에만 내 정보 요청
+        const fetch = async () => {
+            if (!accessToken) return;
+            try {
+                const res = await axiosInstance.get('/v1/users/me');
+                setUsername(res.data.data.name);
+            } catch (e) {
+                console.log('유저 정보 불러오기 실패', e);
+            }
+        };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+        fetch();
+    }, [accessToken]);
 
-  return (
-    <>
-      <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
+    const handleLogout = async () => {
+        await logout();
+        navigate('/');
+    };
 
-      <header className="fixed top-0 left-0 right-0 bg-black text-white shadow-md z-50">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleSidebar}
-              className="flex items-center justify-center p-2 rounded hover:bg-gray-800 transition"
-            >
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 48 48"
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-white"
-              >
-                <path
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="4"
-                  d="M7.95 11.95h32m-32 12h32m-32 12h32"
-                />
-              </svg>
-            </button>
+    return (
+        <>
+        <nav className='bg-white dark:bg-gray-900 shadow-md fixed w-full z-10'>
+            <div className='flex items-center justify-between p-4'>
 
-            <Link to="/" className="text-lg font-bold text-[#ff4cc4]">
-              돌려돌려LP판
-            </Link>
-          </div>
+                <div className='flex items-center gap-6'>
+                    <button onClick={onMenuToggle} aria-label='메뉴 열기/닫기' className='p-2 -ml-1 hover:opacity-80'>
+                        <img src='/images/burger.svg' alt='menu' className='w-6 h-6' />
+                    </button>
+                    <Link 
+                        to ='/' 
+                        className='text-xl font bold text-gray-900 dark:text-white'
+                    >
+                        SpinningSpinning Dollimpan
+                    </Link>
+                </div>
 
-          <nav className="flex items-center gap-4 text-sm ml-auto">
-            <Link to="/search" className="hover:text-pink-400">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="w-5 h-5 inline-block align-middle"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18a7.5 7.5 0 006.15-3.35z"
-                />
-              </svg>
-            </Link>
-
-            {!accessToken ? (
-              <>
-                <Link to="/login" className="hover:text-pink-400 font-medium">
-                  로그인
-                </Link>
-                <Link
-                  to="/signup"
-                  className="bg-[#ff4cc4] hover:bg-[#ff66c7] text-black px-3 py-1 rounded-md font-medium"
-                >
-                  회원가입
-                </Link>
-              </>
-            ) : (
-              <>
-                <span className="text-gray-300">
-                  {userName}님 반갑습니다.
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="hover:text-pink-400 font-medium"
-                >
-                  로그아웃
-                </button>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
-    </>
-  );
+                <div className='flex items-center gap-6'>
+                    <Link 
+                        to={'/search'}
+                        className='p-2 -ml-1 hover:opacity-80'
+                    >
+                        <img src='/images/glasses.svg' alt='search' className='w-6 h-6' />
+                    </Link>
+                    {!accessToken && (
+                        <>
+                            <Link 
+                                to={'/login'} 
+                                className='text-gray-700 dark:text-gray-300 hover:text-blue-500'
+                            >
+                                로그인
+                            </Link>
+                            <Link 
+                                to={'/signup'} 
+                                className='text-gray-700 dark:text-gray-300 hover:text-blue-500'
+                            >
+                                회원가입
+                            </Link>
+                        </>
+                    )}
+                    {accessToken && (
+                        <>
+                            <span className='text-gray-700 dark:text-gray-300 hover:text-blue-500'>{username}님 반갑습니다.</span>
+                            <button 
+                                onClick={handleLogout}
+                                className='text-gray-700 dark:text-gray-300 hover:text-blue-500'
+                            >
+                                로그아웃
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </nav>
+        </>
+    );
 };
 
 export default Navbar;

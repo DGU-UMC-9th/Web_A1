@@ -1,236 +1,315 @@
-import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { Heart, Pencil, Trash, Send } from "lucide-react";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
+import useGetLp from "../hooks/queries/useGetLp";
+import { useAuth } from "../context/AuthContext";
+import useLikeLp from "../hooks/mutations/useLikeLp";
+import useDeleteLp from "../hooks/mutations/useDeleteLp";
+import { useEffect, useState } from "react";
+import { axiosInstance } from "../apis/axios";
+import ComFirmModal from "../components/ComFirmModal";
 import { useInView } from "react-intersection-observer";
+import useGetInfiniteLpComments from "../hooks/queries/useGetInfiniteLpComments";
+import useCreateComment from "../hooks/mutations/useCreateComment";
+import useUpdateComment from "../hooks/mutations/useUpdateComment";
+import useDeleteComment from "../hooks/mutations/useDeleteComment";
+import CommentSkeletonList from "../components/Comment/CommentSkeletonList";
 import { PAGINATION_ORDER } from "../enums/common";
-import { useGetLpDetail } from "../hooks/queries/useGetLpDetail";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
-import CommentSkeletonList from "../components/comment/CommentSkeletonList";
 
-interface Comment {
-  id: number;
-  content: string;
-  createdAt: string;
-  author?: { name?: string };
-}
-
-interface CommentResponse {
-  data: {
-    data: Comment[];
-    hasNext: boolean;
-    nextCursor?: number;
-  };
+function formatRelativeKR(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return "방금 전";
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  return `${Math.floor(diff / 86400)}일 전`;
 }
 
 export default function LpDetailPage() {
   const { lpid } = useParams();
-  const queryClient = useQueryClient();
+  const idNum = Number(lpid);
+  const { accessToken } = useAuth();
+  const nav = useNavigate();
+  const location = useLocation();
 
-  // ✅ LP 상세
-  const { data, isPending, isError, refetch } = useGetLpDetail(lpid!);
-  const lp = data?.data;
+  const [editorName, setEditorName] = useState("");
+  const isGuest = !accessToken;
 
-  // ✅ 댓글 정렬
-  const [order, setOrder] = useState<PAGINATION_ORDER>(PAGINATION_ORDER.desc);
+  const { data: lp, isPending, error, refetch } = useGetLp(lpid);
 
-  // ✅ 댓글 무한 스크롤
-  const {
-    data: comments,
-    isFetching,
-    fetchNextPage,
-    hasNextPage,
-  } = useInfiniteQuery<CommentResponse>({
-    queryKey: ["lpComments", lpid, order],
-    queryFn: async ({ pageParam = 0 }) => {
-      const res = await axios.get<CommentResponse>(
-        `${import.meta.env.VITE_SERVER_API_URL}/comments`,
-        {
-          params: { lpId: lpid, cursor: pageParam, limit: 10, order },
-        }
-      );
-      return res.data;
-    },
-    initialPageParam: 0, // ✅ 필수
-    getNextPageParam: (lastPage) =>
-      lastPage?.data.hasNext ? lastPage.data.nextCursor : undefined,
-  });
-
-  // ✅ 스크롤 트리거
-  const { ref, inView } = useInView({ threshold: 0.1 });
   useEffect(() => {
-    if (inView && hasNextPage && !isFetching) fetchNextPage();
-  }, [inView, hasNextPage, isFetching, fetchNextPage]);
+    if (!lp?.authorId) {
+      setEditorName("");
+      return;
+    }
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await axiosInstance.get(`/v1/users/${lp.authorId}`);
+        const name = res?.data?.data?.name ?? res?.data?.name ?? "";
+        if (!ignore) setEditorName(name);
+      } catch (e) {
+        if (!ignore) setEditorName("");
+        console.log("업데이트한 사용자 정보 불러오기 실패", e);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, [lp?.authorId]);
 
-  // ✅ 댓글 작성
-  const [comment, setComment] = useState("");
-  const handleAddComment = async () => {
-    if (!comment.trim()) return;
-    await axios.post(`${import.meta.env.VITE_SERVER_API_URL}/comments`, {
-      lpId: lpid,
-      content: comment,
-    });
-    setComment("");
-    queryClient.invalidateQueries({ queryKey: ["lpComments", lpid, order] });
-  };
+  const likeMut = useLikeLp(idNum);
+  const delMut = useDeleteLp(idNum);
 
-  // ✅ LP 로딩 상태
-  if (isPending)
+  if (isGuest) {
     return (
-      <div className="mt-10 flex justify-center">
-        <CommentSkeletonList count={1} />
-      </div>
+      <ComFirmModal
+        open
+        title="로그인이 필요합니다"
+        message="LP 상세를 보려면 로그인해 주세요."
+        confirmText="로그인"
+        cancelText="홈으로"
+        onConfirm={() =>
+          nav("/login", { state: { from: location }, replace: true })
+        }
+        onCancel={() => nav("/", { replace: true })}
+      />
     );
+  }
 
-  if (isError)
+  if (isPending) return <div className="p-6 text-blue-400">Loading…</div>;
+
+  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-60 gap-3 text-gray-500">
-        <p>데이터를 불러오는 중 오류가 발생했습니다 😢</p>
+      <div className="p-6 space-y-3 text-blue-400">
+        <div>불러오기 실패: {error.message}</div>
         <button
           onClick={() => refetch()}
-          className="px-4 py-2 bg-pink-500 text-white rounded-md"
+          className="px-3 py-2 rounded bg-blue-700 text-white"
         >
           다시 시도
         </button>
       </div>
     );
+  }
+
+  if (!lp) return <div className="p-6 text-blue-400">데이터가 없습니다.</div>;
+
+  const rel = formatRelativeKR(lp.updatedAt);
+  const likeCount = Array.isArray(lp.likes) ? lp.likes.length : 0;
+
+  const handleGoEdit = () => nav(`/lp/${idNum}/edit`);
+  const handleLike = () => {
+    if (likeMut.isPending) return;
+    likeMut.mutate();
+  };
+  const handleDelete = async () => {
+    if (!confirm("정말 삭제하시겠어요?")) return;
+    try {
+      await delMut.mutateAsync();
+      alert("삭제되었습니다.");
+      nav("/");
+    } catch {
+      alert("삭제 실패");
+    }
+  };
+
+  function CommentsSection({ lpId }: { lpId: number }) {
+    const [order, setOrder] = useState<PAGINATION_ORDER>(PAGINATION_ORDER.desc);
+    const [input, setInput] = useState("");
+    const { ref, inView } = useInView({ threshold: 0 });
+
+    const {
+      data,
+      isPending,
+      isFetchingNextPage,
+      hasNextPage,
+      fetchNextPage,
+      refetch,
+      isError,
+    } = useGetInfiniteLpComments(lpId, order, 10);
+
+    const createMut = useCreateComment(lpId, order);
+    const updateMut = useUpdateComment(lpId, order);
+    const deleteMut = useDeleteComment(lpId, order);
+
+    useEffect(() => {
+      if (inView && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      const content = input.trim();
+      if (!content) return;
+      createMut.mutate(content, {
+        onSuccess: () => setInput(""),
+      });
+    };
+
+    const pages = data?.pages ?? [];
+    const comments = pages.flatMap((p) => p.data.data);
+
+    return (
+      <section className="mt-6">
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setOrder(PAGINATION_ORDER.asc)}
+            className={`px-3 py-1 rounded ${
+              order === "asc" ? "bg-blue-200 text-blue-900" : "bg-blue-700 text-blue-200"
+            }`}
+          >
+            오래된순
+          </button>
+          <button
+            onClick={() => setOrder(PAGINATION_ORDER.desc)}
+            className={`px-3 py-1 rounded ${
+              order === "desc" ? "bg-blue-200 text-blue-900" : "bg-blue-700 text-blue-200"
+            }`}
+          >
+            최신순
+          </button>
+
+          {isError && (
+            <button
+              onClick={() => refetch()}
+              className="ml-auto px-3 py-1 rounded bg-blue-500 text-white"
+            >
+              다시 시도
+            </button>
+          )}
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="댓글을 입력해주세요"
+            className="flex-1 px-3 py-2 rounded bg-blue-900 text-white"
+          />
+          <button
+            type="submit"
+            disabled={createMut.isPending || input.trim().length === 0}
+            className="px-3 py-2 rounded bg-blue-600 text-white disabled:opacity-60"
+          >
+            작성
+          </button>
+        </form>
+
+        {isPending && <CommentSkeletonList count={8} />}
+
+        {!isPending &&
+          comments.map((c) => (
+            <div key={c.id} className="flex items-start gap-3 py-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500 grid place-items-center text-white text-sm">
+                {c.author.name?.slice(0, 1) ?? "U"}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 text-sm text-blue-300">
+                  <span>{c.author.name}</span>
+                  <span className="opacity-60">
+                    {new Date(c.createdAt).toLocaleString()}
+                  </span>
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      className="text-blue-400 hover:underline"
+                      onClick={() => {
+                        const next = prompt("댓글 수정", c.content);
+                        if (next != null) {
+                          updateMut.mutate({ commentId: c.id, content: next });
+                        }
+                      }}
+                    >
+                      수정
+                    </button>
+                    <button
+                      className="text-blue-300 hover:underline"
+                      onClick={() => {
+                        if (confirm("삭제할까요?")) deleteMut.mutate(c.id);
+                      }}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+                <p className="text-blue-100 mt-1">{c.content}</p>
+              </div>
+            </div>
+          ))}
+
+        {isFetchingNextPage && <CommentSkeletonList count={5} />}
+
+        <div ref={ref} className="h-6" />
+      </section>
+    );
+  }
 
   return (
-    <div className="flex justify-center py-12 px-4">
-      <div className="bg-[#1c1c1c] text-white rounded-xl shadow-lg w-full max-w-2xl p-8 flex flex-col gap-6">
-        {/* ✅ 작성자 */}
-        <div className="flex justify-between items-center text-sm text-gray-400">
-          <div className="flex items-center gap-2">
-            <img
-              src={lp?.author?.avatar || "/default-avatar.png"}
-              alt={lp?.author?.name || "작성자"}
-              className="w-8 h-8 rounded-full border border-gray-600"
-            />
-            <span>{lp?.author?.name}</span>
+    <div className="m-10 rounded-xl bg-blue-500/85 shadow-2xl p-6">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="leading-tight">
+            <div className="text-sm text-blue-300">{editorName}</div>
+            <h1 className="text-2xl font-semibold text-blue-100">{lp.title}</h1>
           </div>
-          <span>{lp && new Date(lp.createdAt).toLocaleDateString()}</span>
         </div>
 
-        {/* ✅ 제목 */}
-        <h1 className="text-2xl font-bold">{lp?.title}</h1>
-
-        {/* ✅ 썸네일 */}
-        <div className="flex justify-center">
-          <img
-            src={lp?.thumbnail}
-            alt={lp?.title}
-            className="rounded-lg shadow-md w-72 h-72 object-cover"
-          />
-        </div>
-
-        {/* ✅ 본문 */}
-        <p className="text-gray-300 leading-relaxed whitespace-pre-line">
-          {lp?.content}
-        </p>
-
-        {/* ✅ 태그 */}
-        {lp?.tags && lp.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {lp.tags.map((tag: any) => (
-              <span
-                key={tag.id}
-                className="px-3 py-1 text-xs bg-gray-700 rounded-full text-gray-100"
-              >
-                #{tag.name}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* ✅ 버튼들 */}
-        <div className="flex justify-center items-center gap-6 mt-6">
-          <button className="flex items-center gap-1 hover:opacity-80 transition">
-            <Heart size={20} color="white" fill="white" />
-            <span>{lp?.likes?.length ?? 0}</span>
-          </button>
-
-          <button className="hover:opacity-80">
-            <Pencil size={18} />
-          </button>
-
-          <button className="hover:opacity-80">
-            <Trash size={18} />
-          </button>
-        </div>
-
-        {/* ✅ 댓글 */}
-        <div className="mt-10 border-t border-gray-700 pt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">댓글</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setOrder(PAGINATION_ORDER.desc)}
-                className={`px-3 py-1 text-sm rounded-md ${
-                  order === PAGINATION_ORDER.desc
-                    ? "bg-white text-black"
-                    : "bg-gray-700"
-                }`}
-              >
-                최신순
-              </button>
-              <button
-                onClick={() => setOrder(PAGINATION_ORDER.asc)}
-                className={`px-3 py-1 text-sm rounded-md ${
-                  order === PAGINATION_ORDER.asc
-                    ? "bg-white text-black"
-                    : "bg-gray-700"
-                }`}
-              >
-                오래된순
-              </button>
-            </div>
-          </div>
-
-          {/* ✅ 댓글 입력 */}
-          <div className="flex items-center gap-2 mb-6">
-            <input
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="댓글을 입력하세요..."
-              className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
-            />
-            <button
-              onClick={handleAddComment}
-              className="p-2 bg-pink-500 hover:bg-pink-600 rounded-lg text-white"
-            >
-              <Send size={18} />
+        <div className="flex items-center gap-4 text-blue-800">
+          <span className="text-sm">{rel}</span>
+          <>
+            <button aria-label="수정" className="hover:text-blue-200" onClick={handleGoEdit}>
+              <svg width="18" height="18" viewBox="0 0 24 24" className="fill-current">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm18-11.5a1 1 0 0 0 0-1.41L18.66 1.99a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75L21 5.75Z"/>
+              </svg>
             </button>
-          </div>
-
-          {/* ✅ 댓글 목록 */}
-          <div className="flex flex-col gap-4">
-            {comments?.pages
-              ?.map((page) => page.data.data)
-              ?.flat()
-              ?.map((cmt) => (
-                <div
-                  key={cmt.id}
-                  className="bg-gray-800 p-3 rounded-lg flex flex-col gap-1"
-                >
-                  <div className="flex justify-between items-center text-sm text-gray-300">
-                    <span>{cmt.author?.name || "익명"}</span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(cmt.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="text-gray-200 text-sm">{cmt.content}</p>
-                </div>
-              ))}
-
-            {/* ✅ 댓글 스켈레톤 */}
-            {isFetching && <CommentSkeletonList count={5} />}
-
-          </div>
-
-          {/* ✅ 트리거 */}
-          <div ref={ref} className="h-4" />
+            <button aria-label="삭제" className="hover:text-blue-200" onClick={handleDelete}>
+              <svg width="18" height="18" viewBox="0 0 24 24" className="fill-current">
+                <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM6 9h2v9H6V9Z"/>
+              </svg>
+            </button>
+          </>
         </div>
       </div>
+
+      <div className="flex items-center justify-center">
+        <div className="m-10 w-100 h-100 rounded-xl bg-blue-800/50 p-5 shadow-xl">
+          <img 
+            src={lp.thumbnail}
+            alt={lp.title}
+            className='w-90 h-90 rounded-lg object-cover'
+          />
+        </div>
+      </div>
+
+      <p className="ml-10 mr-10 leading-7 whitespace-pre-line text-blue-100">{lp.content}</p>
+
+      <div className="flex flex-wrap gap-2">
+        {lp.tags?.map((t) => (
+          <span key={t.id} className="px-3 py-1 rounded-full bg-blue-700 text-blue-100 text-sm">
+            #{t.name}
+          </span>
+        ))}
+      </div>
+
+      <CommentsSection lpId={idNum} />
+
+      <div className="mt-6 flex items-center justify-center gap-2 text-blue-300">
+        <button
+          onClick={handleLike}
+          disabled={likeMut.isPending}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
+          aria-label="좋아요"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" className="fill-current">
+            <path d="M12.1 21.35 10 19.45C5.4 15.36 2 12.28 2 8.5A4.5 4.5 0 0 1 6.5 4c1.74 0 3.41.81 4.5 2.09A6 6 0 0 1 15.5 4 4.5 4.5 0 0 1 20 8.5c0 3.78-3.4 6.86-8 10.95l-.9.9Z" />
+          </svg>
+          <span className="text-blue-100">{likeCount}</span>
+        </button>
+      </div>
+
+      <Link to="/" className="mt-6 block cursor-pointer text-blue-700 hover:underline">
+        ← 목록으로
+      </Link>
     </div>
   );
 }

@@ -1,32 +1,43 @@
-// 5주차 3강 (구글 로그인 연동) 관련 파일
-
 import { useEffect } from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { LOCAL_STORAGE_KEY } from "../constants/key";
 
+function stripQuotes(v: string | null) {
+  return typeof v === "string" ? v.replace(/^"|"$/g, "") : v;
+}
+
 const GoogleLoginRedirectPage = () => {
+  const { setItem: setAccessToken } = useLocalStorage(
+    LOCAL_STORAGE_KEY.accessToken
+  );
+  const { setItem: setRefreshToken } = useLocalStorage(
+    LOCAL_STORAGE_KEY.refreshToken
+  );
 
-    const {setItem: setAccessToken } = useLocalStorage(LOCAL_STORAGE_KEY.accessToken);
-    const {setItem: setRefreshToken } = useLocalStorage(LOCAL_STORAGE_KEY.refreshToken);
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
 
-    useEffect (() => {
-        const urlParams = new URLSearchParams(window.location.search); 
-        const accessToken = urlParams.get(LOCAL_STORAGE_KEY.accessToken);
-        const refreshToken = urlParams.get(LOCAL_STORAGE_KEY.refreshToken);
+    // 서버가 쿼리로 내려준 값들
+    const rawAccess = urlParams.get(LOCAL_STORAGE_KEY.accessToken);
+    const rawRefresh = urlParams.get(LOCAL_STORAGE_KEY.refreshToken);
+    const redirect = urlParams.get("redirect") || "/";
 
-        if (accessToken) {
-            setAccessToken(accessToken);
-            setRefreshToken(refreshToken);
-            window.location.href = "/"; // 토큰 저장 후 마이페이지로 이동
-        }
-        
-    }, [setAccessToken, setRefreshToken]);
-    return (
-        <div>
-            구글 로그인 Redirect 화면
-        </div>
-    );
+    const accessToken = stripQuotes(rawAccess);
+    const refreshToken = stripQuotes(rawRefresh);
+
+    if (accessToken) {
+      setAccessToken(accessToken);
+      setRefreshToken(refreshToken);
+
+      // URL에 노출된 쿼리 정리(히스토리 교체)
+      window.history.replaceState(null, "", "/v1/auth/google/callback");
+
+      // 원래 가려던 곳(없으면 홈)으로 복귀
+      window.location.replace(redirect);
+    }
+  }, [setAccessToken, setRefreshToken]);
+
+  return <div>구글 로그인 화면</div>;
 };
-
 
 export default GoogleLoginRedirectPage;

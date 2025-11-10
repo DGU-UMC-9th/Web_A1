@@ -1,17 +1,11 @@
 import CommentSkeleton from "./CommentSkeleton";
 
-interface Props {
-  count?: number;
-}
-
-const CommentSkeletonList = ({ count = 5 }: Props) => {
+export default function CommentSkeletonList({ count = 8 }: { count?: number }) {
   return (
-    <div className="flex flex-col gap-3 mt-2">
-      {Array.from({ length: count }).map((_, idx) => (
-        <CommentSkeleton key={idx} />
+    <div className="mt-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <CommentSkeleton key={i} />
       ))}
     </div>
   );
-};
-
-export default CommentSkeletonList;
+}

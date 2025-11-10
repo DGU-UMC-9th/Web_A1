@@ -1,34 +1,78 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { useRef } from "react";
+import Footer from '../components/Footer.tsx';
+import Navbar from '../components/Navbar.tsx';
+import { useAuth } from '../context/AuthContext.tsx';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import FAB from '../components/FAB.tsx';
+import { useEffect, useMemo, useState } from 'react';
+import Sidebar from '../components/Sidebar.tsx';
+import ConfirmModal from '../components/ComFirmModal.tsx';
 
 const ProtectedLayout = () => {
-  const { accessToken }: { accessToken: string | null } = useAuth();
-  const location = useLocation();
-  const alertedRef = useRef(false); // ✅ alert 중복 방지용 ref
+    const [open, setOpen] = useState(false);
+    const { accessToken } = useAuth();
+    const handleClose = () => setOpen(false);
+    const location = useLocation();
+    const navigate = useNavigate();
 
-  if (!accessToken) {
-    // ✅ React.StrictMode로 인해 alert가 2번 뜨는 현상 방지
-    if (!alertedRef.current) {
-      alert("로그인이 필요한 서비스입니다. 로그인을 해주세요!");
-      alertedRef.current = true;
-    }
+    const needAuthModalOpen = useMemo(() => !accessToken, [accessToken]);
+    
+    const handleConfirm = () => {
+        navigate('/login', {
+        replace: true,
+        state: { from: location }, // 로그인 후 복귀용
+        });
+    };
+    const handleCancel = () => {
+        navigate('/', { replace: true });
+    };
 
-    // ✅ 현재 경로를 문자열로 넘겨서 정확히 복귀할 수 있도록 처리
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
-  }
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 767.98px)');
+        const onChange = (e: MediaQueryListEvent) => {
+        if (e.matches) setOpen(false); // 협소 화면으로 바뀌는 순간 닫기
+        };
+        // 페이지 들어올 때 이미 협소면 닫아두기(안전)
+        if (mq.matches) setOpen(false);
 
-  return (
-    <div className="h-dvh flex flex-col">
-      <Navbar />
-      <main className="flex-1 mt-10">
-        <Outlet />
-      </main>
-      <Footer />
-    </div>
-  );
-};
+        mq.addEventListener('change', onChange);
+        return () => mq.removeEventListener('change', onChange);
+    }, []);
+
+    return (
+        <div className='min-h-screen flex flex-col'>
+            <Navbar onMenuToggle={() => setOpen((v) => !v)} />
+
+             {/* 헤더 아래 영역을 좌-우로 분할 */}
+             <div className="flex pt-7 min-h-0 flex-1 relative">
+                 {/* 왼쪽: 사이드바 (고정X, width만 차지) */}
+                 <Sidebar open={open} />
+ 
+                 <main className='flex-1 overflow-auto bg-blue-200 mt-10'>
+                     <Outlet />
+                 </main>
+                {open && (
+                    <div
+                        className="fixed inset-0 z-30"
+                        onClick={handleClose}
+                        aria-label="사이드바 외부 영역"
+                    />
+                )}
+             </div>
+             
+            <FAB to="/my" label="마이페이지로 이동" />
+            <Footer />
+
+            <ConfirmModal
+                open={needAuthModalOpen}
+                title="로그인이 필요합니다"
+                message="이 페이지는 로그인 후 이용할 수 있습니다. 로그인하시겠어요?"
+                confirmText="로그인"
+                cancelText="홈으로"
+                onConfirm={handleConfirm}
+                onCancel={handleCancel}
+            />
+        </div>
+    )
+}
 
 export default ProtectedLayout;
