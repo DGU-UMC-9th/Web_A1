@@ -1,5 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
-import { LOCAL_STORAGE_KEY } from "../constants/key";
+import { LOCAL_STORAGE_KEY } from "../constants/key.ts";
 import { useLocalStorage } from "../hooks/useLocalStorage.ts";
 
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {

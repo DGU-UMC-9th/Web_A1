@@ -1,6 +1,6 @@
 import useForm from "../hooks/useForm";
-import { validateSignin } from "../utils/validate";
-import type { UserSigninInformation } from "../utils/validate";
+import { validateSignin } from "../utils/validate.ts";
+import type { UserSigninInformation } from "../utils/validate.ts";
 import { useAuth } from "../context/AuthContext";
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
