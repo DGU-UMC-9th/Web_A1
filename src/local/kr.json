@@ -1,0 +1,82 @@
+{
+    "Dashboard": {
+        "title": "대시보드",
+        "total": {
+            "totalSales": "총 매출",
+            "totalOrders": "총 주문",
+            "totalUser": "총 사용자",
+            "totalPending": "총 보류",
+            "up": "어제보다 증가",
+            "down": "어제보다 감소"
+        },
+        "salesDetails": "매출 상세",
+        "dealsDetails": {
+            "title": "거래 내역",
+            "productName": "상품명",
+            "location": "위치",
+            "dateTime": "날짜 - 시간",
+            "piece": "개수",
+            "amount": "금액",
+            "status": "상태"
+        }
+    },
+    "ProductStock": {
+        "image": "이미지",
+        "title": "상품 재고",
+        "productName": "상품명",
+        "category": "카테고리",
+        "price": "가격",
+        "piece": "개수",
+        "availableColor": "가능한 색상",
+        "action": "작업",
+        "searchProductName": "상품명 검색"
+    },
+    "Login": {
+        "title": "계정 로그인",
+        "subtitle": "이메일과 비밀번호를 입력해주세요",
+        "email": "이메일",
+        "emailPlaceholder": "이메일 주소:",
+        "password": "비밀번호",
+        "passwordPlaceholder": "비밀번호",
+        "forgotPassword": "비밀번호를 잊으셨나요?",
+        "rememberPassword": "비밀번호 기억하기",
+        "signIn": "로그인",
+        "noAccount": "계정이 없으신가요?",
+        "createAccount": "계정 만들기"
+    },
+    "SignUp": {
+        "title": "계정 만들기",
+        "subtitle": "계정을 생성하여 계속 진행하세요",
+        "username": "사용자명",
+        "usernamePlaceholder": "사용자명",
+        "email": "이메일",
+        "emailPlaceholder": "esteban_schiller@gmail.com",
+        "password": "비밀번호",
+        "passwordPlaceholder": "비밀번호",
+        "terms": "이용약관에 동의합니다",
+        "signUp": "회원가입",
+        "haveAccount": "이미 계정이 있으신가요?",
+        "login": "로그인"
+    },
+    "Nav": {
+        "search": "검색"
+    },
+    "Sidebar": {
+        "dashboard": "대시보드",
+        "products": "상품",
+        "favorites": "즐겨찾기",
+        "inbox": "받은 편지함",
+        "orderLists": "주문 목록",
+        "stock": "재고",
+        "pricing": "가격",
+        "calendar": "캘린더",
+        "todo": "할 일",
+        "contact": "연락처",
+        "invoice": "송장",
+        "uiElements": "UI 요소",
+        "team": "팀",
+        "table": "테이블",
+        "settings": "설정",
+        "logout": "로그아웃"
+    }
+}
