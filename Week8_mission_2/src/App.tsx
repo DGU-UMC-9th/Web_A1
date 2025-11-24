@@ -5,6 +5,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import MyPage from './pages/MyPage';
+import ThrottlePage from './pages/ThrottlePage';  
 import LpDetailPage from './pages/LpDetailPage';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedLayout from './layouts/ProtectedLayout';
@@ -26,6 +27,7 @@ const publicRoutes: RouteObject[] = [
       { path: 'signup', element: <SignupPage /> },
       { path: "v1/auth/google/callback", element: <GoogleLoginRedirectPage /> },
       { path: 'lp/:lpid', element: <LpDetailPage /> },
+      { path : 'throttle', element: <ThrottlePage /> },
     ],
   },
 ];
