@@ -7,7 +7,7 @@ import Sidebar from '../components/Sidebar';
 import LPWriteModal from '../components/LPWriteModal';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UpdateOrCreateLpDto } from '../types/lp';
-import { createLp } from '../apis/lp';
+import { createLp, lpKeys } from '../apis/lp';
 import { deleteMyAccount } from '../apis/users';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import { LOCAL_STORAGE_KEY } from '../constants/key';
@@ -22,7 +22,7 @@ const HomeLayout = () => {
     const { mutate: mutateCreateLp } = useMutation({
         mutationFn: (payload: UpdateOrCreateLpDto) => createLp(payload),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['lps'] });
+            queryClient.invalidateQueries({ queryKey: lpKeys.all });
             setWriteOpen(false);
         },
         onError: (err) => {
@@ -87,7 +87,7 @@ const HomeLayout = () => {
                 {/* 왼쪽: 사이드바 (고정X, width만 차지) */}
                 <Sidebar open={open} onWithdraw={() => setWithdrawOpen(true)} />
 
-                <main className='flex-1 overflow-auto bg-pink-200 mt-10'>
+                <main className='flex-1 overflow-auto bg-blue-200 mt-10'>
                     <Outlet />
                 </main>
 

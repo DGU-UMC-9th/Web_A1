@@ -1,24 +1,19 @@
-// src/pages/LpDetailPage.tsx
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
-import { useInView } from "react-intersection-observer";
-
-import { useAuth } from "../context/AuthContext";
-import { axiosInstance } from "../apis/axios";
-
 import useGetLp from "../hooks/queries/useGetLp";
+import { useAuth } from "../context/AuthContext";
+import useLikeLp from "../hooks/mutations/useLikeLp";
 import useDeleteLp from "../hooks/mutations/useDeleteLp";
-import useUpdateLp from "../hooks/mutations/useUpdateLp";
-import useToggleLikeOptimistic from "../hooks/mutations/useToggleLikeOptimistic";
-
+import { useEffect, useRef, useState } from "react";
+import { axiosInstance } from "../apis/axios";
+import ComFirmModal from "../components/ComFirmModal";
+import { useInView } from "react-intersection-observer";
 import useGetInfiniteLpComments from "../hooks/queries/useGetInfiniteLpComments";
 import useCreateComment from "../hooks/mutations/useCreateComment";
 import useUpdateComment from "../hooks/mutations/useUpdateComment";
 import useDeleteComment from "../hooks/mutations/useDeleteComment";
-
-import ComFirmModal from "../components/ComFirmModal";
 import CommentSkeletonList from "../components/Comment/CommentSkeletonList";
 import { PAGINATION_ORDER } from "../enums/common";
+import useUpdateLp from "../hooks/mutations/useUpdateLp";
 
 function formatRelativeKR(iso?: string) {
   if (!iso) return "";
@@ -37,13 +32,12 @@ export default function LpDetailPage() {
   const nav = useNavigate();
   const location = useLocation();
 
+  const [editorName, setEditorName] = useState("");
   const isGuest = !accessToken;
 
-  // 상세 데이터
+    //  로그인 상태에서만 데이터 패칭
   const { data: lp, isPending, error, refetch } = useGetLp(lpid);
 
-  // 작성자명 조회 (별도 API)
-  const [editorName, setEditorName] = useState("");
   useEffect(() => {
     if (!lp?.authorId) {
       setEditorName("");
@@ -65,7 +59,6 @@ export default function LpDetailPage() {
     };
   }, [lp?.authorId]);
 
-  // 편집 상태
   const [editMode, setEditMode] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -73,8 +66,7 @@ export default function LpDetailPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-
-  // 상세가 바뀌거나 편집 취소 시, 폼을 원본으로 동기화
+  
   useEffect(() => {
     if (!lp) return;
     if (!editMode) {
@@ -85,14 +77,11 @@ export default function LpDetailPage() {
     }
   }, [lp, editMode]);
 
-  // 좋아요 토글(낙관적 업데이트)
-  const likeMut = useToggleLikeOptimistic(idNum);
-
-  // 삭제/수정
+  const likeMut = useLikeLp(idNum);
   const delMut = useDeleteLp(idNum);
   const { mutateAsync: updateLp, isPending: saving } = useUpdateLp(idNum);
 
-  // 비로그인 → 접근 차단 모달
+  // 비로그인자는 페이지 컨텐츠를 전혀 노출하지 않고 모달만 표시
   if (isGuest) {
     return (
       <ComFirmModal
@@ -138,27 +127,25 @@ export default function LpDetailPage() {
         title: title.trim(),
         content: content.trim(),
         thumbnail: (thumbnail ?? "").trim(),
-        tags: Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean))),
+        tags: Array.from(new Set(tags.map(t => t.trim()).filter(Boolean))),
         published: lp.published ?? true,
       });
       setEditMode(false);
     } catch (e: any) {
       const msg = e?.response?.data?.message || "저장에 실패했습니다.";
-      alert(msg);
+      alert(msg); 
     }
   };
 
   const handlePickFile = () => fileRef.current?.click();
-
-  const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = async (
-    e
-  ) => {
+  const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    // 미션 요구: 파일로 선택 → 미리보기 + 상태 반영
     const reader = new FileReader();
     reader.onload = () => {
       const dataURL = String(reader.result);
-      setThumbnail(dataURL);
+      setThumbnail(dataURL); // 서버가 URL만 받는다면 업로드 API로 바꾸고 여기에 업로드 후 받은 URL을 set해도 됨
     };
     reader.readAsDataURL(f);
   };
@@ -173,7 +160,6 @@ export default function LpDetailPage() {
     setTags((prev) => [...prev, t]);
     setTagInput("");
   };
-
   const removeTag = (name: string) =>
     setTags((prev) => prev.filter((t) => t !== name));
 
@@ -199,18 +185,16 @@ export default function LpDetailPage() {
         <div className="flex items-center gap-3">
           <div className="leading-tight">
             <div className="text-sm text-zinc-300">{editorName}</div>
-            {editMode ? (
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="mt-1 w-full rounded px-3 py-2 bg-zinc-800 text-zinc-100 outline-none focus:ring-2 focus:ring-pink-400"
-                placeholder="제목"
-              />
-            ) : (
-              <h1 className="text-2xl font-semibold text-zinc-100">
-                {lp.title}
-              </h1>
-            )}
+              {editMode ? (
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="mt-1 w-full rounded px-3 py-2 bg-zinc-800 text-zinc-100 outline-none focus:ring-2 focus:ring-pink-400"
+                  placeholder="제목"
+                />
+              ) : (
+                <h1 className="text-2xl font-semibold text-zinc-100">{lp.title}</h1>
+              )}
           </div>
         </div>
 
@@ -218,32 +202,14 @@ export default function LpDetailPage() {
           <span className="text-sm">{rel}</span>
           {isOwner && !editMode && (
             <>
-              <button
-                aria-label="수정"
-                className="hover:text-zinc-200"
-                onClick={() => setEditMode(true)}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  className="fill-current"
-                >
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm18-11.5a1 1 0 0 0 0-1.41L18.66 1.99a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75L21 5.75Z" />
+              <button aria-label="수정" className="hover:text-zinc-200" onClick={() => setEditMode(true)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" className="fill-current">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm18-11.5a1 1 0 0 0 0-1.41L18.66 1.99a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75L21 5.75Z"/>
                 </svg>
               </button>
-              <button
-                aria-label="삭제"
-                className="hover:text-zinc-200"
-                onClick={handleDelete}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  className="fill-current"
-                >
-                  <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM6 9h2v9H6V9Z" />
+              <button aria-label="삭제" className="hover:text-zinc-200" onClick={handleDelete}>
+                <svg width="18" height="18" viewBox="0 0 24 24" className="fill-current">
+                  <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM6 9h2v9H6V9Z"/>
                 </svg>
               </button>
             </>
@@ -313,7 +279,7 @@ export default function LpDetailPage() {
         </p>
       )}
 
-      <div className="mx-10 mt-4">
+<div className="mx-10 mt-4">
         {editMode && (
           <div className="mb-3 flex gap-2">
             <input
@@ -359,6 +325,8 @@ export default function LpDetailPage() {
         </div>
       </div>
 
+      <CommentsSection lpId={idNum} />
+
       <div className="mt-6 flex items-center justify-center gap-2 text-rose-300">
         <button
           onClick={handleLike}
@@ -366,33 +334,21 @@ export default function LpDetailPage() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-60"
           aria-label="좋아요"
         >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            className="fill-current"
-          >
+          <svg width="22" height="22" viewBox="0 0 24 24" className="fill-current">
             <path d="M12.1 21.35 10 19.45C5.4 15.36 2 12.28 2 8.5A4.5 4.5 0 0 1 6.5 4c1.74 0 3.41.81 4.5 2.09A6 6 0 0 1 15.5 4 4.5 4.5 0 0 1 20 8.5c0 3.78-3.4 6.86-8 10.95l-.9.9Z" />
           </svg>
           <span className="text-zinc-100">{likeCount}</span>
         </button>
       </div>
 
-      <CommentsSection lpId={idNum} />
-      
-      <Link
-        to="/"
-        className="mt-6 block cursor:pointer text-blue-700 hover:underline"
-      >
+      <Link to="/" className="mt-6 block cursor:pointer text-blue-700 hover:underline">
         ← 목록으로
       </Link>
     </div>
   );
 
   function CommentsSection({ lpId }: { lpId: number }) {
-    const [order, setOrder] = useState<PAGINATION_ORDER>(
-      PAGINATION_ORDER.desc
-    );
+    const [order, setOrder] = useState<PAGINATION_ORDER>(PAGINATION_ORDER.desc);
     const [input, setInput] = useState("");
     const { ref, inView } = useInView({ threshold: 0 });
 
@@ -434,9 +390,7 @@ export default function LpDetailPage() {
           <button
             onClick={() => setOrder(PAGINATION_ORDER.asc)}
             className={`px-3 py-1 rounded ${
-              order === "asc"
-                ? "bg-zinc-200 text-zinc-900"
-                : "bg-zinc-700 text-zinc-200"
+              order === "asc" ? "bg-zinc-200 text-zinc-900" : "bg-zinc-700 text-zinc-200"
             }`}
           >
             오래된순
@@ -444,9 +398,7 @@ export default function LpDetailPage() {
           <button
             onClick={() => setOrder(PAGINATION_ORDER.desc)}
             className={`px-3 py-1 rounded ${
-              order === "desc"
-                ? "bg-zinc-200 text-zinc-900"
-                : "bg-zinc-700 text-zinc-200"
+              order === "desc" ? "bg-zinc-200 text-zinc-900" : "bg-zinc-700 text-zinc-200"
             }`}
           >
             최신순
@@ -492,16 +444,14 @@ export default function LpDetailPage() {
                   <span className="opacity-60">
                     {new Date(c.createdAt).toLocaleString()}
                   </span>
+                  {/* 예시: 본인 댓글만 수정/삭제 */}
                   <div className="ml-auto flex gap-2">
                     <button
                       className="text-blue-400 hover:underline"
                       onClick={() => {
                         const next = prompt("댓글 수정", c.content);
                         if (next != null) {
-                          updateMut.mutate({
-                            commentId: c.id,
-                            content: next,
-                          });
+                          updateMut.mutate({ commentId: c.id, content: next });
                         }
                       }}
                     >

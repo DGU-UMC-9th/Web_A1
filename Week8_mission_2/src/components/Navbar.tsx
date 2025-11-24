@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useEffect, useState } from 'react';
+import { axiosInstance } from '../apis/axios.ts';
 import { useMutation } from '@tanstack/react-query';
-import useMe from '../hooks/queries/useMe.ts';
 
 interface NavbarProps {
   onMenuToggle: () => void;
@@ -10,25 +11,22 @@ interface NavbarProps {
 const Navbar = ({ onMenuToggle }: NavbarProps) => {
     const  { accessToken, logout } = useAuth();
     const navigate = useNavigate();
-    const { data: me } = useMe();
-    const username = me?.name ?? "";  
+    const [username, setUsername] = useState('');
 
-    //const [username, setUsername] = useState('');
+    useEffect(() => {
+        //로그인 한 경우에만 내 정보 요청
+        const fetch = async () => {
+            if (!accessToken) return;
+            try {
+                const res = await axiosInstance.get('/v1/users/me');
+                setUsername(res.data.data.name);
+            } catch (e) {
+                console.log('유저 정보 불러오기 실패', e);
+            }
+        };
 
-    // useEffect(() => {
-    //     //로그인 한 경우에만 내 정보 요청
-    //     const fetch = async () => {
-    //         if (!accessToken) return;
-    //         try {
-    //             const res = await axiosInstance.get('/v1/users/me');
-    //             setUsername(res.data.data.name);
-    //         } catch (e) {
-    //             console.log('유저 정보 불러오기 실패', e);
-    //         }
-    //     };
-
-    //     fetch();
-    // }, [accessToken]);
+        fetch();
+    }, [accessToken]);
 
     const { mutate: doLogout, isPending } = useMutation({
         mutationFn: async () => {

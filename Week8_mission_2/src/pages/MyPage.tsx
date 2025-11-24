@@ -1,34 +1,73 @@
 import { useEffect, useState } from "react";
-import { type UpdateUserDto } from "../types/auth";
+import { type ResponseMyInfoDto, type UpdateUserDto } from "../types/auth";
+import { LOCAL_STORAGE_KEY } from "../constants/key";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { axiosInstance } from "../apis/axios";
+import { useMutation } from "@tanstack/react-query";
 import { patchMyInfo } from "../apis/users";
-import useMe, { meKey } from "../hooks/queries/useMe";
 
 const DEFAULT_AVATAR = '/public/images/defaultProfile.png';
 
 const MyPage = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const qc = useQueryClient();
-
-  const { data: me } = useMe();
+  const [data, setData] = useState<ResponseMyInfoDto | null>(null);
+  const [open, setOpen] = useState(false);
 
   // 폼 상태
-  const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const [avatar, setAvatar] = useState('');
 
-  const srcAvatar = (me?.avatar && me.avatar.trim()) ? me.avatar : DEFAULT_AVATAR;
-
   useEffect(() => {
-    if (!me) return;
-    setName(me.name ?? "");
-    setBio(me.bio ?? "");
-    setAvatar(me.avatar ?? "");
-  }, [me]);
+    const fetchMyInfo = async () => {
+      const rawToken = localStorage.getItem(LOCAL_STORAGE_KEY.accessToken);
+      const token = rawToken?.replace(/^"|"$/g, "");
+      const url = import.meta.env.VITE_SERVER_API_URL + "/v1/users/me" ;
+
+      try {
+        const res = await axiosInstance.get<ResponseMyInfoDto>(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            accept: "application/json",
+          },
+        });
+        setData(res.data);
+
+        // 폼 초기값 세팅
+        const me = res.data.data;
+        setName(me.name ?? '');
+        setBio(me.bio ?? '');
+        setAvatar(me.avatar ?? '');
+      } catch (error) {
+        console.error("인증 실패 또는 요청 오류:", error);
+      }
+    };
+
+    fetchMyInfo();
+  }, []);
+
+  const me = data?.data;
+  const avatarSrc = me?.avatar || DEFAULT_AVATAR;
+
+  const { mutate: updateMe, isPending } = useMutation({
+    mutationFn: (payload: UpdateUserDto) => patchMyInfo(payload),
+    onSuccess: (updated) => {
+      setData((prev) => 
+        prev ? { ...prev, data: {...prev.data, ...updated }} : ({ data: updated } as ResponseMyInfoDto)
+      );
+      setOpen(false);
+    },
+    onError: (err) => {
+      console.error('유저 정보 수정 실패 : ', err);
+    },
+  });
+
+  const handleLogout = async() => {
+    await logout();
+    navigate('/');
+  };
 
   const openSettings = () => {
     if (!me) return;
@@ -37,43 +76,6 @@ const MyPage = () => {
     setAvatar(me.avatar ?? "");
     setOpen(true);
   };
-
-  const { mutate: updateMe, isPending } = useMutation({
-    mutationFn: patchMyInfo,
-
-    // Optimistic Update
-    onMutate: async (payload: UpdateUserDto) => {
-      await qc.cancelQueries({ queryKey: meKey });
-      const previous = qc.getQueryData(meKey);
-
-      // Navbar/마이페이지가 보는 공통 캐시에 즉시 반영
-      qc.setQueryData(meKey, (old: any) => {
-        if (!old?.data) return old; // 안전
-        return {
-          ...old,
-          data: {
-            ...old.data,
-            ...payload, // name/bio/avatar 즉시 반영
-          },
-        };
-      });
-
-      return { previous };
-    },
-
-    onError: (_e, _p, ctx) => {
-      if (ctx?.previous) qc.setQueryData(meKey, ctx.previous); // 롤백
-    },
-
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: meKey }); // 서버와 동기화
-    },
-
-    onSuccess: (updated) => {
-      qc.setQueryData(meKey, updated); // 확정값으로 보정
-      setOpen(false);
-    },
-  });
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,18 +91,13 @@ const MyPage = () => {
     updateMe(payload);
   };
 
-  const handleLogout = async() => {
-    await logout();
-    navigate('/');
-  };
-
-  if (!me) return null;
+  if (!data) return null;
 
   return (
     <div className="p-6 min-h-screen bg-pink-200">
       <div className="flex items-center gap-4">
         <img
-          src={srcAvatar}
+          src={avatarSrc}
           alt="프로필"
           className="h-20 w-20 rounded-full object-cover border border-black/10 bg-white"
         />

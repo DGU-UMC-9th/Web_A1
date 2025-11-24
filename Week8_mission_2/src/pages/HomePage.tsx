@@ -4,10 +4,12 @@ import { PAGINATION_ORDER } from "../enums/common";
 import { useInView } from 'react-intersection-observer';
 import LpCard from "../components/LpCard/LpCard";
 import LpCardSkeletonList from "../components/LpCard/LpCardSkeletonList";
+import useDebounce from "../hooks/useDebounce";
 
 const Homepage = () => {
     const [search, setSearch] = useState("");
     const [order, setOrder] = useState<PAGINATION_ORDER>(PAGINATION_ORDER.asc);
+    const debouncedValue = useDebounce<string>(search, 500);
 
     // const { data, isPending, isError } = useGetLpList({
     //     search,
@@ -22,7 +24,7 @@ const Homepage = () => {
         fetchNextPage, 
         isError,
         refetch,
-    } = useGetInfiniteLpList(10, search, order);
+    } = useGetInfiniteLpList(10, debouncedValue, order);
 
     const handleToggleOrder = () => {
         setOrder((prev) => 
@@ -69,9 +71,13 @@ const Homepage = () => {
             >
                 {order === PAGINATION_ORDER.asc ? '최신순' : '오래된순'}
             </button>
+            <span className="ml-5">
+            <input 
+            className={"border"}
+            placeholder = {"검색어를 입력하세요"}         
+            value={search} onChange={(e) => setSearch(e.target.value)} />
+            </span>
 
-            <input value={search} onChange={(e) => setSearch(e.target.value)} />
-            
             <div 
                 className={
                     'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
