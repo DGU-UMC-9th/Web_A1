@@ -1,12 +1,14 @@
+import { useCartInfo } from "../hooks/useCartStore";
 import { useDispatch, useSelector } from "../hooks/useCustomRedux"
+import { useModalStore } from "../hooks/useModalStore";
 import { clearCart } from "../slices/cartSlice";
 import { openModal } from "../slices/modalSlice";
 
 const PriceBox = () => {
-    const {total} = useSelector((state)=>state.cart);
-    const dispatch = useDispatch();
+    const{total} = useCartInfo();
+    const {openModal} = useModalStore();
     const handleInitializeCart = ()=>{
-        dispatch(openModal());
+        openModal();
     }
   return (
     <div className='p-12 flex justify-between'>
